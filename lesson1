@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Finger DIV Generative (MediaPipe)</title>
+<!-- ここはページのタイトルや設定を書く場所だよ -->
+</head>
+<body>
+
+<div id="wrap">
+ <!-- ここにカメラの映像を表示するよ -->
+ <video id="cam"></video>
+</div>
+
+<script>
+// HTMLにある videoタグ（id="cam"）を見つけて、変数に入れるよ
+const video = document.getElementById("cam");
+
+// カメラを起動する関数（命令のまとまり）を作るよ
+// async（非同期）をつけるのは、カメラの準備ができるのを「待つ」必要があるからだよ
+async function startCamera(){
+  // ブラウザに「カメラを使わせて！」とお願いするよ
+  const stream = await navigator.mediaDevices.getUserMedia({
+    video: { facingMode: "user" }, // 自撮りカメラ（インカメラ）を使うよ
+    audio: false // 音は使わないよ
+  });
+  // カメラの映像データ（stream）を videoタグにセットするよ
+  video.srcObject = stream;
+  // 映像の再生をスタートするよ
+  await video.play();
+}
+
+// 作った関数を実行して、実際にカメラを動かすよ
+startCamera();
+</script>
+
+</body>
+</html>
