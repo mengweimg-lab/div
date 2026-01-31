@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>Generative Art -Draw-</title>
+<style>
+body {
+ margin: 0;
+}
+#canvas {
+ width: 100vw;
+ height: 100vh;
+ background: #111;
+ position: relative;
+ overflow: hidden;
+}
+.circle {
+ position: absolute;
+ border-radius: 50%;
+ pointer-events: none; /* マウスの邪魔にならないようにするよ */
+}
+</style>
+</head>
+<body>
+
+<div id="canvas"></div>
+
+<script src="https://code.jquery.com/jquery.js"></script>
+<script>
+// クリックではなく、マウスを動かしたときに実行するように変更したよ
+$('#canvas').on('mousemove', make);
+
+function make(e){
+ // 円の大きさをランダムに決めるよ
+ var size = Math.random() * 100 + 20;
+ // マウスの位置に合わせて、円の中心を決めるよ
+ var x = e.clientX - size/2;
+ var y = e.clientY - size/2;
+ 
+ // 色をランダムに決めるよ
+ var r = Math.floor(Math.random() * 256);
+ var g = Math.floor(Math.random() * 256);
+ var b = Math.floor(Math.random() * 256);
+ var a = Math.random();
+ 
+ // 円（div要素）を作って、スタイルを設定するよ
+ var $circle = $('<div></div>')
+  .addClass('circle')
+  .css({
+    width: size + 'px',
+    height: size + 'px',
+    left: x + 'px',
+    top: y + 'px',
+    backgroundColor: `rgba(${r}, ${g}, ${b}, ${a})`
+  });
+ 
+ // 画面に円を追加するよ
+ $('#canvas').append($circle);
+
+ // 【ライフサイクル】
+ // 1秒（1000ミリ秒）かけて、だんだん透明にするよ
+ // アニメーションが終わったら、この円を削除（remove）してメモリを節約するよ
+ $circle.animate({
+     opacity: 0,
+     top: (y - 50) + 'px' // 少し上に浮かび上がる動きもつけてみたよ
+ }, 1000, function(){
+     $(this).remove(); // ここで完全に消すよ
+ });
+}
+</script>
+</body>
+</html>
