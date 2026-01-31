@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>STEP1-2 MediaPipe Hand Detection</title>
+
+<style>
+  html, body {
+    margin: 0;
+    height: 100%;
+    overflow: hidden; /* 画面からはみ出した部分は隠すよ */
+    background: #000;
+  }
+  #wrap {
+    position: fixed;
+    inset: 0;
+  }
+  video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* 【UX】画面いっぱいに映像を広げて、黒い隙間ができないようにするよ */
+    transform: scaleX(-1); /* 【UX】鏡のように左右反転させて、自分が動いた方向に映像も動くようにするよ */
+  }
+  #msg {
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    padding: 8px 12px;
+    background: rgba(0,0,0,0.5);
+    color: #fff;
+    font-size: 14px;
+    border-radius: 6px;
+    /* 【UX】今何が起きているか（読み込み中など）を文字で伝えて、ユーザーを不安にさせないようにするよ */
+  }
+</style>
+</head>
+
+<body>
+
+<div id="wrap">
+  <video id="cam" autoplay playsinline></video>
+</div>
+<div id="msg">初期化中…</div>
+
+<script type="module">
+// MediaPipe（メディアパイプ）という、Googleが作った便利なAIツールをネットから借りてくるよ
+import { HandLandmarker, FilesetResolver } from
+  "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0";
+
+// HTMLにあるタグを見つけて、JavaScriptで操れるように名前をつけるよ
+const video = document.getElementById("cam");
+const msg = document.getElementById("msg");
+
+let handLandmarker; // 手を見つけるAIを入れる箱
+let lastVideoTime = -1; // 最後に映像をチェックした時間を記録する箱
+
+/* --- カメラ起動 --- */
+// カメラを使えるようにする関数だよ
+async function startCamera(){
+  // ブラウザに「カメラを使わせて！」とお願いするよ
+  // 【UX】スマホならインカメラ（user）を使って、鏡のように使えるようにするよ
+  const stream = await navigator.mediaDevices.getUserMedia({
+    video: { facingMode: "user" },
+    audio: false // 音は使わないからオフにするよ
+  });
+  // カメラの映像データ（stream）を videoタグにセットするよ
+  video.srcObject = stream;
+
+  // 映像の準備ができるまで少し待つよ
+  await new Promise(resolve => {
+    video.onloadedmetadata = () => resolve();
+  });
+
+  // 映像の再生をスタートするよ
+  await video.play().catch(() => {});
+}
+
+/* --- MediaPipe 初期化 --- */
+// 手を見つけるAI（人工知能）を準備する関数だよ
+async function initMediaPipe(){
+  // AIを動かすためのプログラム（WASM）を読み込むよ
+  const vision = await FilesetResolver.forVisionTasks(
+    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
+  );
+
+  // 手を見つけるための設定をして、AIを作るよ
+  handLandmarker = await HandLandmarker.createFromOptions(vision, {
+    baseOptions: {
+      modelAssetPath:
+        "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task"
+    },
+    runningMode: "VIDEO", // ビデオ映像に対して使う設定だよ
+    numHands: 1 // 手は1つだけ探すよ
+  });
+}
+
+/* --- 認識ループ --- */
+// ずっと繰り返して、映像をチェックし続ける関数だよ
+function loop(){
+  // 今の時間を取得するよ
+  const now = performance.now();
+
+  // 映像が新しくなっていたら、AIにチェックしてもらうよ
+  if (video.currentTime !== lastVideoTime) {
+    // ここでAIが手を探すよ！
+    const result = handLandmarker.detectForVideo(video, now);
+    lastVideoTime = video.currentTime;
+
+    // 手が見つかったかどうかで、メッセージを変えるよ
+    // 【UX】ちゃんと認識できているかユーザーに教えてあげるよ
+    if (result.landmarks && result.landmarks.length > 0) {
+      msg.textContent = "手を検出しています";
+    } else {
+      msg.textContent = "手が見つかりません";
+    }
+  }
+
+  // 次の画面更新のタイミングで、またこの loop関数 を呼んでねとお願いするよ
+  // これでパラパラ漫画のように動き続けるよ
+  requestAnimationFrame(loop);
+}
+
+/* --- 起動 --- */
+// ページが開かれたら最初に実行される部分だよ
+(async function main(){
+  try {
+    // まずカメラを起動して…
+    await startCamera();
+    // 次にAIを準備して…
+    await initMediaPipe();
+    // 準備ができたらメッセージを変えて…
+    msg.textContent = "手を映してください";
+    // 繰り返しのチェックをスタートするよ！
+    requestAnimationFrame(loop);
+  } catch (e) {
+    // もし途中でエラー（カメラが許可されないなど）が起きたらここに来るよ
+    console.error(e);
+    // 【UX】何が原因で動かないのかヒントを出してあげるよ
+    msg.textContent = "起動できません（HTTPS/権限を確認）";
+  }
+})();
+</script>
+
+</body>
+</html>
